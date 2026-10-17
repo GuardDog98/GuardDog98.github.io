@@ -622,7 +622,8 @@
         paper,
         x,
         y,
-        speed: (0.6 + Math.random() * 0.8) * lv.speed
+        speed: (0.6 + Math.random() * 0.8) * lv.speed,
+        removed: false
       });
     }
 
@@ -638,7 +639,8 @@
       const idx = people.findIndex(p => p.id === id);
       if (idx === -1) return;
       const p = people[idx];
-      p.el.remove();
+      p.removed = true;
+      try { p.el.remove(); } catch (e) {}
       people.splice(idx, 1);
 
       if (selected && selected.id === id) {
@@ -654,6 +656,9 @@
 
     function allowSelected() {
       if (!selected) return;
+
+      // mark removed immediately so the queue loop won't process it
+      selected.removed = true;
 
       const isValid = selected.valid;
       if (isValid) {
@@ -674,6 +679,8 @@
     function removeSelected() {
       if (!selected) return;
 
+      selected.removed = true;
+
       if (!selected.valid) {
         score += 12 + currentLevelIndex * 4;
         selected.el.style.opacity = '0';
@@ -692,6 +699,7 @@
     function stepQueue() {
       for (let i = people.length - 1; i >= 0; i--) {
         const p = people[i];
+        if (p.removed) continue; // skip already-handled people
         p.x -= p.speed * 2;
 
         if (p.x < 12) {
