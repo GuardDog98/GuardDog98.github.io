@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Target Rush</title>
+  <style>
+    :root{
+      --bg1:#070b1a;
+      --bg2:#0f1c2d;
+      --panel:#101a2f;
+      --panel2:#15263f;
+      --accent:#6ee7ff;
+      --accent2:#7cffb2;
+      --danger:#ff5f7a;
+      --gold:#ffd166;
+      --text:#ecf6ff;
+      --muted:#a7bbd6;
+      --shadow:rgba(0,0,0,.35);
+    }
+
+    * { box-sizing:border-box; }
+
+    html, body {
+      margin:0;
+      width:100%;
+      height:100%;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(110,231,255,.10), transparent 28%),
+        radial-gradient(circle at 90% 10%, rgba(124,255,178,.10), transparent 25%),
+        linear-gradient(160deg, var(--bg1), var(--bg2));
+      color:var(--text);
+      overflow:hidden;
+    }
+
+    body{
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      padding:20px;
+    }
+
+    .app{
+      width:min(960px, 100%);
+      height:min(740px, 92vh);
+      background:rgba(10,17,30,.72);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:26px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.50);
+      backdrop-filter: blur(10px);
+      overflow:hidden;
+      position:relative;
+    }
+
+    .hud{
+      position:absolute;
+      top:18px;
+      left:18px;
+      right:18px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      z-index:30;
+      pointer-events:none;
+    }
+
+    .brand{
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      padding:10px 14px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--text);
+      font-size:12px;
+    }
+
+    .stats{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .chip{
+      min-width:110px;
+      background:rgba(18,30,50,.7);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:14px;
+      padding:10px 12px;
+      text-align:center;
+      box-shadow:inset 0 1px rgba(255,255,255,.04);
+    }
+
+    .chip .label{
+      display:block;
+      color:var(--muted);
+      font-size:11px;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      margin-bottom:4px;
+    }
+
+    .chip .value{
+      font-weight:800;
+      font-size:22px;
+      color:var(--text);
+    }
+
+    .chip.score .value{
+      color:var(--gold);
+    }
+
+    .chip.timer .value{
+      color:var(--accent2);
+    }
+
+    canvas{
+      width:100%;
+      height:100%;
+      display:block;
+      background:
+        linear-gradient(180deg, rgba(20,32,54,.85), rgba(7,12,20,.95)),
+        radial-gradient(circle at center, rgba(110,231,255,.08), transparent 45%);
+      cursor:crosshair;
+    }
+
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:rgba(4,8,15,.38);
+      backdrop-filter: blur(4px);
+      z-index:25;
+      transition:opacity .25s ease;
+    }
+
+    .overlay.hidden{
+      opacity:0;
+      pointer-events:none;
+    }
+
+    .panel{
+      width:min(440px, 78vw);
+      background:rgba(12,18,31,.82);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:22px;
+      box-shadow:0 30px 60px rgba(0,0,0,.38);
+      padding:28px 24px 22px;
+    }
+
+    .panel h1{
+      margin:0 0 10px;
+      font-size:clamp(28px, 4vw, 42px);
+      letter-spacing:.02em;
+      line-height:1.1;
+      text-align:center;
+      color:var(--text);
+    }
+
+    .panel p{
+      margin:0 0 20px;
+      text-align:center;
+      color:var(--muted);
+      font-size:15px;
+      line-height:1.5;
+    }
+
+    .controls{
+      display:flex;
+      justify-content:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+
+    button{
+      border:none;
+      border-radius:14px;
+      padding:13px 18px;
+      font-size:16px;
+      font-weight:800;
+      cursor:pointer;
+      letter-spacing:.02em;
+      transition:transform .12s ease, filter .12s ease, box-shadow .12s ease;
+      box-shadow:0 16px 26px rgba(0,0,0,.25);
+    }
+
+    button:hover{ transform:translateY(-1px); filter:brightness(1.02); }
+    button:active{ transform:translateY(1px) scale(.99); }
+
+    .primary{
+      background:linear-gradient(135deg, var(--accent), #7d98ff);
+      color:#06111e;
+    }
+
+    .secondary{
+      background:linear-gradient(135deg, #1d2d45, #24395b);
+      color:var(--text);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .result{
+      margin-top:14px;
+      text-align:center;
+      font-size:18px;
+      font-weight:700;
+      color:var(--gold);
+    }
+
+    @media(max-width:640px){
+      .hud{top:12px; left:12px; right:12px;}
+      .brand{font-size:10px; letter-spacing:.06em; padding:8px 10px;}
+      .chip{min-width:82px; padding:9px 10px;}
+      .chip .label{font-size:9px;}
+      .chip .value{font-size:18px;}
+      .panel{padding:22px 18px 18px;}
+      .panel h1{font-size:30px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="hud">
+      <div class="brand">Neon Target Rush</div>
+      <div class="stats">
+        <div class="chip score">
+          <span class="label">Score</span>
+          <span class="value" id="score">0</span>
+        </div>
+        <div class="chip timer">
+          <span class="label">Time</span>
+          <span class="value" id="time">30</span>
+        </div>
+        <div class="chip">
+          <span class="label">Combo</span>
+          <span class="value" id="combo">x1</span>
+        </div>
+      </div>
+    </div>
+
+    <canvas id="game"></canvas>
+
+    <div class="overlay" id="overlay">
+      <div class="panel">
+        <h1>Neon Target Rush</h1>
+        <p>Click the target, build combos, and chase the highest score in 30 seconds.</p>
+        <div class="controls">
+          <button id="startBtn" class="primary">Start Game</button>
+        </div>
+        <div class="result" id="resultText"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+
+    const scoreEl = document.getElementById('score');
+    const timeEl = document.getElementById('time');
+    const comboEl = document.getElementById('combo');
+    const overlay = document.getElementById('overlay');
+    const resultText = document.getElementById('resultText');
+    const startBtn = document.getElementById('startBtn');
+
+    let w = 0, h = 0;
+    let score = 0;
+    let timeLeft = 30;
+    let combo = 1;
+    let lastHit = 0;
+    let gameRunning = false;
+    let animationId = null;
+    let timerId = null;
+    let bestScore = Number(localStorage.getItem('neonTargetBest') || 0);
+
+    const target = {
+      x: 200,
+      y: 200,
+      radius: 36,
+      vx: 2.8,
+      vy: 2.2,
+      hue: 190
+    };
+
+    const particles = [];
+    const stars = [];
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.floor(rect.width * ratio));
+      canvas.height = Math.max(1, Math.floor(rect.height * ratio));
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+
+      w = rect.width;
+      h = rect.height;
+      initStars();
+      resetTarget();
+    }
+
+    function initStars() {
+      stars.length = 0;
+      const starCount = Math.min(120, Math.max(35, Math.floor(w / 12)));
+      for (let i = 0; i < starCount; i++) {
+        stars.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 2.2 + 0.8,
+          alpha: Math.random() * 0.8 + 0.2
+        });
+      }
+    }
+
+    function resetTarget() {
+      target.radius = 30 + Math.random() * 18;
+      target.x = target.radius + Math.random() * (w - target.radius * 2);
+      target.y = target.radius + Math.random() * (h - target.radius * 2);
+      target.vx = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2.2);
+      target.vy = (Math.random() > 0.5 ? 1 : -1) * (2 + Math.random() * 2.2);
+      target.hue = 180 + Math.random() * 100;
+    }
+
+    function updateHud() {
+      scoreEl.textContent = score;
+      timeEl.textContent = timeLeft;
+      comboEl.textContent = 'x' + combo;
+    }
+
+    function startGame() {
+      score = 0;
+      timeLeft = 30;
+      combo = 1;
+      lastHit = 0;
+      gameRunning = true;
+      overlay.classList.add('hidden');
+      resultText.textContent = '';
+
+      updateHud();
+
+      if (timerId) clearInterval(timerId);
+      if (animationId) cancelAnimationFrame(animationId);
+
+      timerId = setInterval(() => {
+        if (!gameRunning) return;
+        timeLeft -= 1;
+        updateHud();
+        if (timeLeft <= 0) {
+          endGame();
+        }
+      }, 1000);
+
+      animationLoop();
+    }
+
+    function endGame() {
+      gameRunning = false;
+      clearInterval(timerId);
+      cancelAnimationFrame(animationId);
+
+      bestScore = Math.max(bestScore, score);
+      localStorage.setItem('neonTargetBest', String(bestScore));
+
+      resultText.textContent = 'Your score: ' + score + ' • Best: ' + bestScore;
+      overlay.classList.remove('hidden');
+      startBtn.textContent = 'Play Again';
+    }
+
+    function spawnParticles(x, y, count = 18, color = '#7cf5ff') {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x,
+          y,
+          r: Math.random() * 4 + 2,
+          dx: (Math.random() - 0.5) * 7,
+          dy: (Math.random() - 0.5) * 7,
+          life: 32 + Math.random() * 20,
+          color
+        });
+      }
+    }
+
+    function playHitSound() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+
+        const audioCtx = new AudioCtx();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.value = 640 + Math.random() * 180;
+        gain.gain.value = 0.03;
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.06);
+
+        setTimeout(() => audioCtx.close(), 120);
+      } catch (e) {}
+    }
+
+    function handleClick(event) {
+      if (!gameRunning) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const px = event.clientX - rect.left;
+      const py = event.clientY - rect.top;
+
+      const dx = px - target.x;
+      const dy = py - target.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist <= target.radius) {
+        const now = performance.now();
+        const hitWindow = now - lastHit;
+
+        if (hitWindow < 500) {
+          combo = Math.min(combo + 1, 12);
+        } else {
+          combo = 1;
+        }
+        lastHit = now;
+
+        score += Math.round(10 * combo + target.radius * 0.4);
+        updateHud();
+
+        spawnParticles(target.x, target.y, 22, 'hsl(' + target.hue + ', 100%, 70%)');
+        playHitSound();
+
+        resetTarget();
+      } else {
+        score = Math.max(0, score - 1);
+        updateHud();
+      }
+    }
+
+    function drawBackground() {
+      ctx.clearRect(0, 0, w, h);
+
+      const glow = ctx.createRadialGradient(w * 0.5, h * 0.38, 40, w * 0.5, h * 0.38, Math.max(w, h) * 0.8);
+      glow.addColorStop(0, 'rgba(110,231,255,0.14)');
+      glow.addColorStop(1, 'rgba(7,11,20,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, h);
+
+      for (const star of stars) {
+        ctx.beginPath();
+        ctx.fillStyle = 'rgba(255,255,255,' + star.alpha + ')';
+        ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function updateTarget() {
+      target.x += target.vx;
+      target.y += target.vy;
+
+      if (target.x - target.radius < 0 || target.x + target.radius > w) {
+        target.vx *= -1;
+      }
+      if (target.y - target.radius < 0 || target.y + target.radius > h) {
+        target.vy *= -1;
+      }
+
+      target.x = Math.min(Math.max(target.x, target.radius), w - target.radius);
+      target.y = Math.min(Math.max(target.y, target.radius), h - target.radius);
+    }
+
+    function drawTarget() {
+      const pulse = 1 + Math.sin(performance.now() * 0.008) * 0.12;
+
+      ctx.save();
+      ctx.translate(target.x, target.y);
+
+      ctx.beginPath();
+      ctx.fillStyle = 'hsla(' + target.hue + ', 100%, 70%, 0.20)';
+      ctx.arc(0, 0, target.radius * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.strokeStyle = 'hsla(' + target.hue + ', 100%, 70%, 0.95)';
+      ctx.lineWidth = 3;
+      ctx.arc(0, 0, target.radius * pulse, 0, Math.PI * 2);
+      ctx.stroke();
+
+      const grad = ctx.createRadialGradient(-target.radius * 0.28, -target.radius * 0.35, 5, 0, 0, target.radius + 10);
+      grad.addColorStop(0, '#fff');
+      grad.addColorStop(0.3, 'hsl(' + target.hue + ', 100%, 70%)');
+      grad.addColorStop(1, 'hsl(' + (target.hue + 20) + ', 85%, 55%)');
+      ctx.beginPath();
+      ctx.fillStyle = grad;
+      ctx.arc(0, 0, target.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.arc(0, 0, target.radius * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function drawParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.dx;
+        p.y += p.dy;
+        p.life -= 1;
+        if (p.life <= 0) {
+          particles.splice(i, 1);
+          continue;
+        }
+
+        ctx.beginPath();
+        ctx.fillStyle = p.color + (Math.min(255, Math.max(0, p.life * 7)).toString(16).padStart(2, '0'));
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function animationLoop() {
+      drawBackground();
+      drawParticles();
+
+      if (gameRunning) {
+        updateTarget();
+        drawTarget();
+      }
+
+      animationId = requestAnimationFrame(animationLoop);
+    }
+
+    startBtn.addEventListener('click', startGame);
+    canvas.addEventListener('click', handleClick);
+
+    window.addEventListener('resize', resizeCanvas);
+
+    resizeCanvas();
+    updateHud();
+    drawBackground();
+    drawTarget();
+  </script>
+</body>
+</html>
