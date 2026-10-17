@@ -478,7 +478,7 @@
 
         <div class="panel-box">
           <div class="tiny">Rules</div>
-          <div style="color:var(--muted); line-height:1.5; margin-top:8px;" id="rulesText">Only ascending sequences like 3 4 5 are valid. Wrong papers must be removed.</div>
+          <div style="color:var(--muted); line-height:1.5; margin-top:8px;" id="rulesText">People come one by one and wait for you to act.</div>
         </div>
       </aside>
     </div>
@@ -486,7 +486,7 @@
     <div class="confirm-overlay" id="startOverlay">
       <div class="confirm-card">
         <h2>Gatekeeper</h2>
-        <p>Inspect each person's paper. Allow valid ascending numbers through, and remove suspicious ones before they reach the gate.</p>
+        <p>Persons arrive one by one and wait for your decision. Click the person to inspect and decide.</p>
         <div class="mini-row">
           <button class="primary-btn" id="beginBtn">Start Game</button>
         </div>
@@ -496,11 +496,11 @@
 
   <script>
     const levels = [
-      { name: 'Training', duration: 25, spawn: 1900, speed: 0.7, length: 3, invalidChance: 0.22, passScore: 30 },
-      { name: 'Patrol', duration: 28, spawn: 1500, speed: 1.0, length: 3, invalidChance: 0.28, passScore: 60 },
-      { name: 'Alert', duration: 30, spawn: 1250, speed: 1.3, length: 4, invalidChance: 0.32, passScore: 100 },
-      { name: 'High Alert', duration: 32, spawn: 1050, speed: 1.7, length: 4, invalidChance: 0.40, passScore: 180 },
-      { name: 'Lockdown', duration: 35, spawn: 900, speed: 2.15, length: 5, invalidChance: 0.48, passScore: 260 }
+      { name: 'Training', duration: 25, spawn: 2500, speed: 0.7, length: 3, invalidChance: 0.22, passScore: 30 },
+      { name: 'Patrol', duration: 28, spawn: 2200, speed: 1.0, length: 3, invalidChance: 0.28, passScore: 60 },
+      { name: 'Alert', duration: 30, spawn: 1800, speed: 1.3, length: 4, invalidChance: 0.32, passScore: 100 },
+      { name: 'High Alert', duration: 32, spawn: 1500, speed: 1.7, length: 4, invalidChance: 0.40, passScore: 180 },
+      { name: 'Lockdown', duration: 35, spawn: 1200, speed: 2.15, length: 5, invalidChance: 0.48, passScore: 260 }
     ];
 
     const queueEl = document.getElementById('queue');
@@ -558,7 +558,7 @@
       scoreEl.textContent = score;
       timeEl.textContent = timeLeft;
       levelEl.textContent = String(currentLevelIndex + 1);
-      rulesText.textContent = `${lv.name}: valid papers are ascending sequences like 3 4 5. Wrong papers should be removed before they reach the gate.`;
+      rulesText.textContent = `${lv.name}: people arrive one by one and wait for you. Every person is processed individually.`;
     }
 
     function renderLevelButtons() {
@@ -598,6 +598,7 @@
       const paper = createPaper(valid, lv.length);
       const id = ++personId;
 
+      queueEl.innerHTML = '';
       const el = document.createElement('div');
       el.className = 'person';
       el.dataset.id = String(id);
@@ -609,22 +610,16 @@
       `;
       el.addEventListener('click', () => selectPerson(id));
 
-      const x = queueEl.clientWidth - 120;
-      const y = 30 + Math.random() * (queueEl.clientHeight - 150);
+      const x = queueEl.clientWidth * 0.45;
+      const y = queueEl.clientHeight * 0.45;
       el.style.left = x + 'px';
       el.style.top = y + 'px';
       queueEl.appendChild(el);
 
-      people.push({
-        id,
-        el,
-        valid,
-        paper,
-        x,
-        y,
-        speed: (0.6 + Math.random() * 0.8) * lv.speed,
-        removed: false
-      });
+      const current = { id, el, valid, paper, x, y, speed: 0, removed: false };
+      people = [current];
+      selected = current;
+      renderInspect();
     }
 
     function selectPerson(id) {
@@ -654,72 +649,65 @@
       setTimeout(() => flash.style.opacity = '0', 180);
     }
 
-    function allowSelected() {
+    function handlePersonDecision(allowed) {
       if (!selected) return;
+      const target = selected;
+      const isValid = target.valid;
 
-      // mark removed immediately so the queue loop won't process it
-      selected.removed = true;
-
-      const isValid = selected.valid;
-      if (isValid) {
+      if (allowed === isValid) {
         score += 12 + currentLevelIndex * 5;
-        removePerson(selected.id);
-      } else {
-        score = Math.max(0, score - 16);
-        selected.el.style.opacity = '0';
-        selected.el.style.transform = 'translateX(160px) scale(0.7)';
-        setTimeout(() => removePerson(selected.id), 240);
-      }
-
-      updateHud();
-      flashMistEffect();
-      renderInspect();
-    }
-
-    function removeSelected() {
-      if (!selected) return;
-
-      selected.removed = true;
-
-      if (!selected.valid) {
-        score += 12 + currentLevelIndex * 4;
-        selected.el.style.opacity = '0';
-        setTimeout(() => removePerson(selected.id), 220);
+        target.el.style.opacity = '0';
+        target.el.style.transform = 'translateY(-8px) scale(0.86)';
+        setTimeout(() => removePerson(target.id), 220);
       } else {
         score = Math.max(0, score - 12);
-        selected.el.style.transform = 'translateX(-30px)';
-        setTimeout(() => removePerson(selected.id), 180);
+        target.el.style.opacity = '0';
+        target.el.style.transform = 'translateX(-30px) scale(0.78)';
+        setTimeout(() => removePerson(target.id), 200);
       }
 
       updateHud();
       flashMistEffect();
       renderInspect();
+      setTimeout(() => {
+        if (running) addPerson();
+      }, 260);
     }
 
-    function stepQueue() {
-      for (let i = people.length - 1; i >= 0; i--) {
-        const p = people[i];
-        if (p.removed) continue; // skip already-handled people
-        p.x -= p.speed * 2;
+    function startRound() {
+      const lv = levels[currentLevelIndex];
+      running = true;
+      timeLeft = lv.duration;
+      score = 0;
+      selected = null;
+      people.forEach(p => p.el.remove());
+      people = [];
+      renderInspect();
+      updateHud();
 
-        if (p.x < 12) {
-          if (p.valid) {
-            score += 6 + currentLevelIndex * 3;
-          } else {
-            score = Math.max(0, score - 10);
-          }
-          removePerson(p.id);
-          updateHud();
-          continue;
+      clearInterval(spawnTimer);
+      clearInterval(gameTimer);
+      clearInterval(countdownTimer);
+
+      addPerson();
+
+      gameTimer = setInterval(() => {
+        if (!running) return;
+        if (people.length === 0 && running) {
+          addPerson();
         }
+      }, 300);
 
-        p.el.style.left = p.x + 'px';
-      }
+      countdownTimer = setInterval(() => {
+        if (!running) return;
+        timeLeft -= 1;
+        updateHud();
+        if (timeLeft <= 0) endRound();
+      }, 1000);
     }
 
     function endRound() {
       running = false;
-      clearInterval(spawnTimer);
       clearInterval(gameTimer);
       clearInterval(countdownTimer);
 
@@ -746,37 +734,6 @@
       }
     }
 
-    function startRound() {
-      const lv = levels[currentLevelIndex];
-      running = true;
-      timeLeft = lv.duration;
-      score = 0;
-      selected = null;
-      people.forEach(p => p.el.remove());
-      people = [];
-      renderInspect();
-      updateHud();
-
-      clearInterval(spawnTimer);
-      clearInterval(gameTimer);
-      clearInterval(countdownTimer);
-
-      spawnTimer = setInterval(() => {
-        if (running) addPerson();
-      }, lv.spawn);
-
-      gameTimer = setInterval(() => {
-        if (running) stepQueue();
-      }, 1000 / 60);
-
-      countdownTimer = setInterval(() => {
-        if (!running) return;
-        timeLeft -= 1;
-        updateHud();
-        if (timeLeft <= 0) endRound();
-      }, 1000);
-    }
-
     function init() {
       renderLevelButtons();
       updateHud();
@@ -785,14 +742,8 @@
         startRound();
       });
       startBtn.addEventListener('click', () => startRound());
-      allowBtn.addEventListener('click', allowSelected);
-      removeBtn.addEventListener('click', removeSelected);
-      window.addEventListener('resize', () => {
-        people.forEach(p => {
-          p.x = Math.min(p.x, queueEl.clientWidth - 120);
-          p.el.style.left = p.x + 'px';
-        });
-      });
+      allowBtn.addEventListener('click', () => handlePersonDecision(true));
+      removeBtn.addEventListener('click', () => handlePersonDecision(false));
     }
 
     init();
