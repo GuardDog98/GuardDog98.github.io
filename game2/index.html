@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Gatekeeper — Security Check</title>
   <style>
-    :root{--bg:#071428;--card:#0c2433;--accent:#7ee7ff;--good:#7cffb2;--bad:#ff7a7a;--text:#eaf6ff}
+    :root{--bg:#071428;--card:#0c2433;--accent:#7ee7ff;--good:#7cffb2;--bad:#ff7a7a;--text:#eaf6ff;--muted:#b2c5d8}
     *{box-sizing:border-box}
     html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
     body{background:linear-gradient(180deg,#041021,#071428);color:var(--text);display:flex;align-items:center;justify-content:center;padding:18px}
@@ -17,31 +17,32 @@
 
     .play-area{position:absolute;left:20px;right:20px;top:64px;bottom:20px;border-radius:10px;background:linear-gradient(180deg,#071b2a,#041021);overflow:hidden;display:flex}
     .street{flex:1;position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);}
-    .building{width:320px;background:linear-gradient(180deg,#071b29,#04121a);border-left:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;align-items:center;padding:24px;gap:12px}
+    .building{width:340px;background:linear-gradient(180deg,#071b29,#04121a);border-left:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;align-items:center;padding:18px;gap:12px}
 
-    /* gate */
-    .gate{width:100%;height:120px;background:linear-gradient(180deg,#0b2a3a,#04202a);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text);font-weight:800;font-size:20px}
-    .queue{position:absolute;left:20px;right:360px;top:16px;bottom:16px;overflow:hidden}
+    .gate{width:100%;height:110px;background:linear-gradient(180deg,#0b2a3a,#04202a);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text);font-weight:800;font-size:20px}
+    .queue{position:absolute;left:18px;right:16px;top:10px;bottom:10px;overflow:hidden}
 
-    .person{position:absolute;display:flex;flex-direction:column;align-items:center;gap:6px;width:84px}
-    .person .body{width:60px;height:70px;background:linear-gradient(180deg,#2b6b8a,#0b4558);border-radius:8px;position:relative}
+    .person{position:absolute;display:flex;flex-direction:column;align-items:center;gap:6px;width:84px;user-select:none}
+    .person .body{width:60px;height:70px;background:linear-gradient(180deg,#2b6b8a,#0b4558);border-radius:8px;position:relative;box-shadow:0 10px 26px rgba(0,0,0,0.25)}
     .paper{position:absolute;top:-26px;left:6px;background:#fff;padding:6px 8px;border-radius:6px;color:#042;box-shadow:0 6px 18px rgba(2,6,10,0.6);font-family:monospace;font-weight:700}
 
-    .controls{display:flex;flex-direction:column;gap:10px;width:320px;padding:8px}
+    .controls{display:flex;flex-direction:column;gap:10px;width:100%}
     .panel{background:rgba(255,255,255,0.02);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03)}
     .btn{background:linear-gradient(90deg,var(--accent),#7d9cff);border:none;padding:10px 12px;border-radius:8px;color:#041421;font-weight:800;cursor:pointer}
     .btn.secondary{background:linear-gradient(90deg,#183544,#12323c);color:var(--text);}
 
-    .inspect{margin-top:8px;min-height:70px;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center}
+    .inspect{margin-top:8px;min-height:80px;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center}
     .paperLarge{background:#fff;padding:10px 12px;border-radius:8px;color:#042;font-family:monospace;font-weight:900}
-
+    .small{font-size:13px;color:var(--muted)}
     .message{font-size:14px;color:var(--text)}
-
     .score{font-weight:900;font-size:18px}
-    .small{font-size:13px;color:rgba(255,255,255,0.7)}
 
-    /* desert animation */
-    .desert{position:absolute;right:-140px;bottom:40px;width:120px;height:80px;background:linear-gradient(180deg,#e9d7ba,#d9b98f);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#7b4c1d;font-weight:800}
+    .level-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+    .level-item{padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02)}
+    .level-item.active{background:linear-gradient(90deg,var(--accent),#7d9cff);color:#041421;font-weight:800}
+
+    .flash{position:absolute;inset:0;background:var(--bad);opacity:0;pointer-events:none;mix-blend-mode:screen;transition:opacity .18s ease}
+    .title-row{display:flex;align-items:center;justify-content:space-between;width:100%}
 
     @media(max-width:980px){ .building{display:none} .queue{right:20px} }
   </style>
@@ -49,7 +50,7 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>Gatekeeper — Security Check (Game 2)</h1>
+      <h1>Gatekeeper — Security Check</h1>
       <div class="hud">
         <div class="pill">Level: <span id="lv">1</span></div>
         <div class="pill">Time: <span id="time">30</span>s</div>
@@ -60,14 +61,18 @@
     <div class="play-area">
       <div class="street">
         <div class="queue" id="queue"></div>
-        <div class="desert" id="desert" style="display:none">DESERT</div>
+        <div class="flash" id="missFlash"></div>
       </div>
 
       <div class="building">
         <div class="gate">SECURE ENTRANCE</div>
+
         <div class="controls">
           <div class="panel">
-            <div class="small">Selected person</div>
+            <div class="title-row">
+              <div class="small">Selected person</div>
+              <button id="startBtn" class="btn secondary" style="padding:8px 10px;font-size:12px">Start</button>
+            </div>
             <div class="inspect" id="inspect">
               <div class="small">Click a person to inspect their paper</div>
             </div>
@@ -82,8 +87,13 @@
           </div>
 
           <div class="panel">
+            <div class="small">Levels</div>
+            <div class="level-list" id="levels"></div>
+          </div>
+
+          <div class="panel">
             <div class="small">Level info</div>
-            <div class="small" id="levelInfo">Good people show a correct ascending sequence (e.g. 3 4 5). Detect wrong papers.</div>
+            <div class="small" id="levelInfo">Correct papers are ascending sequences like “3 4 5”. Wrong papers are rejected or removed.</div>
           </div>
         </div>
       </div>
@@ -91,7 +101,14 @@
   </div>
 
   <script>
-    // Game logic
+    const levels = [
+      { name:'Training', duration:25, spawn:2000, speed:0.6, length:3, invalidChance:0.25, passScore:30 },
+      { name:'Patrol', duration:28, spawn:1600, speed:0.9, length:3, invalidChance:0.28, passScore:60 },
+      { name:'Alert', duration:30, spawn:1300, speed:1.1, length:4, invalidChance:0.34, passScore:110 },
+      { name:'High Alert', duration:32, spawn:1100, speed:1.5, length:4, invalidChance:0.4, passScore:180 },
+      { name:'Lockdown', duration:35, spawn:900, speed:2, length:5, invalidChance:0.48, passScore:260 }
+    ];
+
     const queueEl = document.getElementById('queue');
     const inspectEl = document.getElementById('inspect');
     const allowBtn = document.getElementById('allowBtn');
@@ -100,18 +117,10 @@
     const timeEl = document.getElementById('time');
     const lvEl = document.getElementById('lv');
     const levelInfo = document.getElementById('levelInfo');
-    const desertEl = document.getElementById('desert');
+    const missFlash = document.getElementById('missFlash');
+    const levelsNode = document.getElementById('levels');
+    const startBtn = document.getElementById('startBtn');
 
-    // Levels: increasing difficulty
-    const levels = [
-      { name:'Training', duration:25, spawn:2000, speed:0.6, length:3, invalidChance:0.25, passScore:30 },
-      { name:'Patrol', duration:28, spawn:1600, speed:0.9, length:3, invalidChance:0.28, passScore:60 },
-      { name:'Alert', duration:30, spawn:1300, speed:1.1, length:4, invalidChance:0.34, passScore:110 },
-      { name:'High Alert', duration:32, spawn:1100, speed:1.5, length:4, invalidChance:0.4, passScore:180 },
-      { name:'Lockdown', duration:35, spawn:900, speed:2.0, length:5, invalidChance:0.48, passScore:260 }
-    ];
-
-    let width=800, height=560;
     let people = [];
     let selected = null;
     let score = 0;
@@ -119,28 +128,66 @@
     let currentLevel = 0;
     let spawnTimer = null;
     let gameTimer = null;
+    let countdownTimer = null;
     let running = false;
     let personId = 0;
 
-    function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min }
+    function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
 
     function createPaper(isValid, length){
-      // If valid: ascending consecutive numbers, e.g. 3 4 5
-      // If invalid: random numbers or one digit wrong
       const start = randInt(1,9);
-      const seq = [];
-      for(let i=0;i<length;i++) seq.push(start + i);
-      if(isValid){ return seq.join(' '); }
-
-      // make invalid: shuffle or change one digit
-      if(Math.random()<0.5){ // shuffle a bit
+      const seq = Array.from({length}, (_,i) => start + i);
+      if (isValid) return seq.join(' ');
+      if (Math.random() < 0.5) {
         const arr = seq.slice();
-        // swap two positions
-        const a = randInt(0,arr.length-1); const b = randInt(0,arr.length-1);
-        const t=arr[a]; arr[a]=arr[b]; arr[b]=t; return arr.join(' ');
-      } else {
-        const arr = seq.slice(); const idx = randInt(0,arr.length-1); arr[idx] = arr[idx] + randInt(1,3); return arr.join(' ');
+        const a = randInt(0, arr.length - 1);
+        const b = randInt(0, arr.length - 1);
+        const t = arr[a]; arr[a] = arr[b]; arr[b] = t;
+        return arr.join(' ');
       }
+      const arr = seq.slice();
+      const idx = randInt(0, arr.length - 1);
+      arr[idx] = arr[idx] + randInt(1,3);
+      return arr.join(' ');
+    }
+
+    function renderLevelButtons(){
+      levelsNode.innerHTML = '';
+      levels.forEach((lv, idx) => {
+        const btn = document.createElement('div');
+        btn.className = 'level-item' + (idx === currentLevel ? ' active' : '');
+        btn.textContent = `${lv.name} — ${lv.passScore} pts`;
+        btn.addEventListener('click', () => {
+          currentLevel = idx;
+          renderLevelButtons();
+          updateHUD();
+        });
+        levelsNode.appendChild(btn);
+      });
+    }
+
+    function updateHUD(){
+      const lv = levels[currentLevel];
+      scoreEl.textContent = score;
+      timeEl.textContent = timeLeft;
+      lvEl.textContent = currentLevel + 1;
+      levelInfo.textContent = `${lv.name}: ${lv.length}-digit ascending papers, ${lv.invalidChance * 100}% invalid chance.`;
+    }
+
+    function renderInspect(){
+      if (!selected) {
+        inspectEl.innerHTML = '<div class="small">Click a person to inspect their paper</div>';
+        return;
+      }
+      inspectEl.innerHTML = `<div class="paperLarge">${selected.paper}</div><div class="small">Valid: ${selected.valid ? 'Yes' : 'No'}</div>`;
+    }
+
+    function selectPerson(id){
+      selected = people.find(p => p.id === id) || null;
+      renderInspect();
+      Array.from(queueEl.children).forEach(ch => {
+        ch.style.outline = ch.dataset.id == id ? '2px solid rgba(255,255,255,0.2)' : 'none';
+      });
     }
 
     function spawnPerson(){
@@ -150,134 +197,152 @@
       const id = ++personId;
       const el = document.createElement('div');
       el.className = 'person';
-      el.style.left = (queueEl.clientWidth - 100) + 'px';
-      el.style.top = (20 + Math.random()*(queueEl.clientHeight - 140)) + 'px';
-      el.dataset.id = id;
-      el.dataset.valid = isValid ? '1':'0';
+      el.dataset.id = String(id);
+      el.dataset.valid = isValid ? '1' : '0';
       el.dataset.paper = paper;
       el.innerHTML = `<div class="body"></div><div class="paper">${paper}</div>`;
-      el.addEventListener('click', ()=> selectPerson(id));
+      el.addEventListener('click', () => selectPerson(id));
       queueEl.appendChild(el);
 
-      const speed = (0.4 + Math.random()*0.6) * lv.speed; // px per tick
-      people.push({ id, el, x: queueEl.clientWidth - 100, y: parseFloat(el.style.top), speed, valid: isValid, paper });
+      const x = queueEl.clientWidth - 90;
+      const y = 20 + Math.random() * (queueEl.clientHeight - 120);
+      el.style.left = x + 'px';
+      el.style.top = y + 'px';
+
+      people.push({ id, el, x, y, valid: isValid, paper, speed: (0.4 + Math.random() * 0.7) * lv.speed });
     }
 
-    function selectPerson(id){
-      selected = people.find(p=>p.id==id);
-      renderInspect();
-      // highlight
-      Array.from(queueEl.children).forEach(ch=> ch.style.outline = (ch.dataset.id==id? '2px solid rgba(255,255,255,0.12)' : 'none'));
+    function removePerson(id){
+      const idx = people.findIndex(p => p.id === id);
+      if (idx === -1) return;
+      const p = people[idx];
+      p.el.remove();
+      people.splice(idx, 1);
+      if (selected && selected.id === id) {
+        selected = null;
+        renderInspect();
+      }
     }
 
-    function renderInspect(){
-      if(!selected){ inspectEl.innerHTML = '<div class="small">Click a person to inspect their paper</div>'; return; }
-      inspectEl.innerHTML = `<div class="paperLarge">${selected.paper}</div><div class="small">Valid: ${selected.valid? 'Yes' : 'No'}</div>`;
+    function flashMiss(){
+      missFlash.style.opacity = '0.9';
+      setTimeout(() => missFlash.style.opacity = '0', 140);
     }
 
     function allowSelected(){
-      if(!selected) return;
-      // If valid -> +points; if invalid -> penalty and send to desert
-      if(selected.valid){ score += 10 + (currentLevel*5); removePerson(selected.id); }
-      else { score = Math.max(0, score - 15); sendToDesert(selected.id); }
+      if (!selected) return;
+      if (selected.valid) {
+        score += 10 + currentLevel * 5;
+        removePerson(selected.id);
+      } else {
+        score = Math.max(0, score - 15);
+        selected.el.style.opacity = '0';
+        selected.el.style.transform = 'translateX(200px) scale(0.7)';
+        setTimeout(() => removePerson(selected.id), 300);
+      }
+      flashMiss();
+      if (!selected) renderInspect();
       updateHUD();
     }
 
     function removeSelected(){
-      if(!selected) return;
-      // Removing: if invalid -> +points; if valid -> penalty
-      if(!selected.valid){ score += 8 + (currentLevel*4); sendToDesert(selected.id); }
-      else { score = Math.max(0, score - 12); removePerson(selected.id); }
-      updateHUD();
-    }
-
-    function removePerson(id){
-      const idx = people.findIndex(p=>p.id==id); if(idx===-1) return; const p = people[idx]; p.el.remove(); people.splice(idx,1); if(selected && selected.id==id) selected=null; renderInspect(); }
-
-    function sendToDesert(id){
-      const idx = people.findIndex(p=>p.id==id); if(idx===-1) return; const p = people[idx];
-      // animate to desert (move right and fade)
-      const el = p.el; el.style.transition = 'transform 1s ease, opacity 1s ease'; el.style.transform = `translateX(180px) translateY(40px) rotate(6deg)`; el.style.opacity = '0'; setTimeout(()=>{ try{ el.remove(); }catch(e){} }, 1100);
-      people.splice(idx,1); if(selected && selected.id==id) selected=null; renderInspect();
-    }
-
-    function updateHUD(){ scoreEl.textContent = score; timeEl.textContent = timeLeft; lvEl.textContent = (currentLevel+1); }
-
-    function tick(){
-      // move people left towards gate edge (x=0 is left; building is at right edge of queue)
-      for(let i=people.length-1;i>=0;i--){ const p = people[i]; p.x -= p.speed * 2; if(p.x < 20){ // reached gate
-          // auto-evaluate: if valid -> allowed in (score), if invalid -> penalty
-          if(p.valid){ score += 6 + currentLevel*3; } else { score = Math.max(0, score - 10); sendToDesert(p.id); continue; }
-          // removed automatically
-          try{ p.el.remove(); }catch(e){}; people.splice(i,1); if(selected && selected.id==p.id){ selected=null; renderInspect(); }
-        } else {
-          p.el.style.left = p.x + 'px';
-        }
-      }
-      updateHUD();
-    }
-
-    function gameLoop(){ tick(); }
-
-    function startLevel(index){
-      currentLevel = index; score = 0; timeLeft = levels[currentLevel].duration; updateHUD(); renderLevelInfo();
-      // clear existing
-      people.forEach(p=>p.el.remove()); people=[]; selected=null; renderInspect();
-      // spawn timer
-      if(spawnTimer) clearInterval(spawnTimer);
-      spawnTimer = setInterval(()=> spawnPerson(), levels[currentLevel].spawn);
-      // tick loop 60fps
-      if(gameTimer) clearInterval(gameTimer);
-      gameTimer = setInterval(()=> { gameLoop(); }, 1000/30);
-      // countdown
-      if(window._countdown) clearInterval(window._countdown);
-      window._countdown = setInterval(()=>{
-        timeLeft--; updateHUD(); if(timeLeft<=0){ endLevel(); }
-      },1000);
-      running = true;
-    }
-
-    function endLevel(){
-      running = false; clearInterval(spawnTimer); clearInterval(gameTimer); clearInterval(window._countdown);
-      // Determine pass / fail by score >= passScore
-      const pass = score >= levels[currentLevel].passScore;
-      if(pass){
-        alert(`Level ${levels[currentLevel].name} complete! Score: ${score}`);
-        if(currentLevel < levels.length-1){ startLevel(currentLevel+1); }
-        else { alert('You completed all levels! Well done.'); resetGame(); }
+      if (!selected) return;
+      if (!selected.valid) {
+        score += 8 + currentLevel * 4;
+        selected.el.style.opacity = '0';
+        setTimeout(() => removePerson(selected.id), 250);
       } else {
-        alert(`You failed level ${levels[currentLevel].name}. Score: ${score}. Try again.`);
-        resetGame();
+        score = Math.max(0, score - 12);
+        selected.el.style.transform = 'translateX(-30px)';
+        setTimeout(() => removePerson(selected.id), 200);
+      }
+      flashMiss();
+      updateHUD();
+    }
+
+    function tickQueue(){
+      for (let i = people.length - 1; i >= 0; i--) {
+        const p = people[i];
+        p.x -= p.speed * 2;
+        if (p.x < 20) {
+          if (p.valid) {
+            score += 6 + currentLevel * 3;
+          } else {
+            score = Math.max(0, score - 10);
+          }
+          removePerson(p.id);
+          updateHUD();
+          continue;
+        }
+        p.el.style.left = p.x + 'px';
+      }
+      updateHUD();
+    }
+
+    function startRound(){
+      const lv = levels[currentLevel];
+      running = true;
+      score = 0;
+      timeLeft = lv.duration;
+      people.forEach(p => p.el.remove());
+      people = [];
+      selected = null;
+      renderInspect();
+      updateHUD();
+
+      if (spawnTimer) clearInterval(spawnTimer);
+      if (gameTimer) clearInterval(gameTimer);
+      if (countdownTimer) clearInterval(countdownTimer);
+
+      spawnTimer = setInterval(() => spawnPerson(), lv.spawn);
+      gameTimer = setInterval(() => {
+        if (running) tickQueue();
+      }, 1000 / 30);
+
+      countdownTimer = setInterval(() => {
+        if (!running) return;
+        timeLeft -= 1;
+        updateHUD();
+        if (timeLeft <= 0) endRound();
+      }, 1000);
+    }
+
+    function endRound(){
+      running = false;
+      clearInterval(spawnTimer);
+      clearInterval(gameTimer);
+      clearInterval(countdownTimer);
+
+      const lv = levels[currentLevel];
+      const passed = score >= lv.passScore;
+
+      if (passed) {
+        if (currentLevel < levels.length - 1) {
+          alert(`Level cleared! ${lv.name} passed. Moving to ${levels[currentLevel + 1].name}.`);
+          currentLevel += 1;
+          renderLevelButtons();
+          startRound();
+        } else {
+          alert('You cleared all levels! Excellent work.');
+          currentLevel = 0;
+          renderLevelButtons();
+          startRound();
+        }
+      } else {
+        alert(`Level failed. Score: ${score}. Needed: ${lv.passScore}. Try again.`);
+        currentLevel = Math.max(0, currentLevel);
+        renderLevelButtons();
+        startRound();
       }
     }
 
-    function resetGame(){
-      // reset to first level and stop spawning
-      if(spawnTimer) clearInterval(spawnTimer); if(gameTimer) clearInterval(gameTimer); if(window._countdown) clearInterval(window._countdown);
-      people.forEach(p=>p.el.remove()); people=[]; selected=null; renderInspect(); score=0; currentLevel=0; timeLeft = levels[0].duration; updateHUD(); renderLevelButtons();
-    }
-
-    function renderLevelButtons(){
-      levelsNode.innerHTML = '';
-      levels.forEach((lv, idx)=>{
-        const b = document.createElement('div'); b.className='panel small'; b.style.cursor='pointer'; b.style.margin='6px 0'; b.innerHTML = `<strong>${lv.name}</strong> — ${lv.label || lv.desc || ''}`;
-        b.addEventListener('click', ()=>{ if(running){ if(!confirm('Restart with this level?')) return; } startLevel(idx); });
-        levelsNode.appendChild(b);
-      });
-    }
-
-    // Buttons
     allowBtn.addEventListener('click', allowSelected);
     removeBtn.addEventListener('click', removeSelected);
+    startBtn.addEventListener('click', () => startRound());
 
-    // init
-    function init(){ renderLevelButtons(); updateHUD(); // initial spawn a few
-      spawnPerson(); spawnPerson(); spawnPerson();
-    }
-
-    init();
-    // expose reset
-    window.startLevel = startLevel; window.resetGame = resetGame;
+    renderLevelButtons();
+    updateHUD();
+    startRound();
   </script>
 </body>
 </html>
