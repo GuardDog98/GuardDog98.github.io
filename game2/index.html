@@ -1,100 +1,494 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Gatekeeper — Security Check</title>
   <style>
-    :root{--bg:#071428;--card:#0c2433;--accent:#7ee7ff;--good:#7cffb2;--bad:#ff7a7a;--text:#eaf6ff;--muted:#b2c5d8}
-    *{box-sizing:border-box}
-    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
-    body{background:linear-gradient(180deg,#041021,#071428);color:var(--text);display:flex;align-items:center;justify-content:center;padding:18px}
-    .wrap{width:min(1100px,98%);height:min(760px,92vh);background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);border-radius:14px;overflow:hidden;position:relative;border:1px solid rgba(255,255,255,0.04)}
-    header{padding:14px 20px;display:flex;gap:14px;align-items:center}
-    header h1{margin:0;font-size:18px}
-    .hud{margin-left:auto;display:flex;gap:10px;align-items:center}
-    .pill{background:rgba(255,255,255,0.03);padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);font-weight:700}
+    :root {
+      --bg-1: #07162a;
+      --bg-2: #0d2340;
+      --panel: rgba(9, 20, 32, 0.9);
+      --panel-2: rgba(16, 29, 43, 0.92);
+      --line: rgba(255,255,255,0.08);
+      --text: #edf7ff;
+      --muted: #a8bfd3;
+      --accent: #7fe3ff;
+      --accent-2: #7df7bb;
+      --gold: #ffd166;
+      --danger: #ff6d6d;
+      --warning: #ffb15a;
+      --shadow: rgba(0, 0, 0, 0.5);
+    }
 
-    .play-area{position:absolute;left:20px;right:20px;top:64px;bottom:20px;border-radius:10px;background:linear-gradient(180deg,#071b2a,#041021);overflow:hidden;display:flex}
-    .street{flex:1;position:relative;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);}
-    .building{width:340px;background:linear-gradient(180deg,#071b29,#04121a);border-left:1px solid rgba(255,255,255,0.03);display:flex;flex-direction:column;align-items:center;padding:18px;gap:12px}
+    * { box-sizing: border-box; }
 
-    .gate{width:100%;height:110px;background:linear-gradient(180deg,#0b2a3a,#04202a);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text);font-weight:800;font-size:20px}
-    .queue{position:absolute;left:18px;right:16px;top:10px;bottom:10px;overflow:hidden}
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(circle at 12% 12%, rgba(127,227,255,.08), transparent 22%),
+        radial-gradient(circle at 85% 10%, rgba(125,247,187,.08), transparent 24%),
+        linear-gradient(180deg, var(--bg-1), var(--bg-2));
+      color: var(--text);
+    }
 
-    .person{position:absolute;display:flex;flex-direction:column;align-items:center;gap:6px;width:84px;user-select:none}
-    .person .body{width:60px;height:70px;background:linear-gradient(180deg,#2b6b8a,#0b4558);border-radius:8px;position:relative;box-shadow:0 10px 26px rgba(0,0,0,0.25)}
-    .paper{position:absolute;top:-26px;left:6px;background:#fff;padding:6px 8px;border-radius:6px;color:#042;box-shadow:0 6px 18px rgba(2,6,10,0.6);font-family:monospace;font-weight:700}
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 18px;
+    }
 
-    .controls{display:flex;flex-direction:column;gap:10px;width:100%}
-    .panel{background:rgba(255,255,255,0.02);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03)}
-    .btn{background:linear-gradient(90deg,var(--accent),#7d9cff);border:none;padding:10px 12px;border-radius:8px;color:#041421;font-weight:800;cursor:pointer}
-    .btn.secondary{background:linear-gradient(90deg,#183544,#12323c);color:var(--text);}
+    .game-shell {
+      position: relative;
+      width: min(1160px, 98vw);
+      height: min(760px, 92vh);
+      background: rgba(7, 18, 32, 0.78);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.48);
+      overflow: hidden;
+    }
 
-    .inspect{margin-top:8px;min-height:80px;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center}
-    .paperLarge{background:#fff;padding:10px 12px;border-radius:8px;color:#042;font-family:monospace;font-weight:900}
-    .small{font-size:13px;color:var(--muted)}
-    .message{font-size:14px;color:var(--text)}
-    .score{font-weight:900;font-size:18px}
+    .topbar {
+      position: absolute;
+      top: 18px;
+      left: 22px;
+      right: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      z-index: 10;
+    }
 
-    .level-list{display:flex;flex-direction:column;gap:8px;margin-top:6px}
-    .level-item{padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02)}
-    .level-item.active{background:linear-gradient(90deg,var(--accent),#7d9cff);color:#041421;font-weight:800}
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
 
-    .flash{position:absolute;inset:0;background:var(--bad);opacity:0;pointer-events:none;mix-blend-mode:screen;transition:opacity .18s ease}
-    .title-row{display:flex;align-items:center;justify-content:space-between;width:100%}
+    .brand-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: linear-gradient(180deg, var(--accent), #7d98ff);
+      box-shadow: 0 0 16px rgba(127,227,255,.8);
+    }
 
-    @media(max-width:980px){ .building{display:none} .queue{right:20px} }
+    .stats {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .stat {
+      min-width: 110px;
+      padding: 9px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.02);
+      text-align: center;
+    }
+
+    .stat .label {
+      display: block;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: 10px;
+      margin-bottom: 4px;
+    }
+
+    .stat .value {
+      display: block;
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .stat.score .value { color: var(--gold); }
+    .stat.time .value { color: var(--accent-2); }
+    .stat.level .value { color: var(--accent); }
+
+    .arena {
+      position: absolute;
+      left: 20px;
+      right: 20px;
+      top: 84px;
+      bottom: 20px;
+      display: flex;
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(10,18,29,.8), rgba(6,12,18,.96));
+      border: 1px solid rgba(255,255,255,.03);
+      overflow: hidden;
+    }
+
+    .street {
+      position: relative;
+      flex: 1;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.04)),
+        linear-gradient(0deg, rgba(255,255,255,.02), transparent 35%);
+      overflow: hidden;
+    }
+
+    .street::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.04) 0, rgba(255,255,255,.04) 1px, transparent 1px, transparent 150px),
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.04));
+      opacity: .25;
+    }
+
+    .queue {
+      position: absolute;
+      inset: 18px 12px 18px 10px;
+      overflow: hidden;
+    }
+
+    .person {
+      position: absolute;
+      width: 86px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      transform: translate3d(0,0,0);
+      transition: opacity .18s ease, transform .18s ease, filter .18s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .person .body {
+      position: relative;
+      width: 56px;
+      height: 68px;
+      border-radius: 12px 12px 10px 10px;
+      background: linear-gradient(180deg, #3e85a7, #124d64);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.15), 0 8px 20px rgba(0,0,0,.18);
+    }
+
+    .person .body::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: -10px;
+      width: 22px;
+      height: 22px;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      background: #f4d7bb;
+      box-shadow: inset 0 0 0 2px rgba(0,0,0,.08);
+    }
+
+    .person .body::after {
+      content: "";
+      position: absolute;
+      width: 36px;
+      height: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: -8px;
+      border-radius: 16px;
+      background: rgba(0,0,0,.1);
+    }
+
+    .paper {
+      position: absolute;
+      top: -30px;
+      left: 10px;
+      min-width: 52px;
+      padding: 6px 8px;
+      border-radius: 8px;
+      background: rgba(255,255,255,.96);
+      color: #0c1f2d;
+      font-weight: 800;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 12px;
+      letter-spacing: .03em;
+      box-shadow: 0 10px 24px rgba(0,0,0,.25);
+      white-space: nowrap;
+      border: 1px solid rgba(0,0,0,.05);
+      text-align: center;
+    }
+
+    .selected {
+      filter: brightness(1.15);
+      outline: 2px solid rgba(127,227,255,.7);
+      outline-offset: 2px;
+      border-radius: 8px;
+    }
+
+    .side-panel {
+      width: 350px;
+      background: linear-gradient(180deg, rgba(12, 23, 35, .98), rgba(8, 15, 22, .98));
+      border-left: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      padding: 18px 16px 16px;
+      gap: 12px;
+    }
+
+    .panel-box {
+      background: rgba(255,255,255,.025);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .panel-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .panel-title .tiny {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .inspect-box {
+      min-height: 124px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: var(--muted);
+      background: rgba(255,255,255,.015);
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.03);
+      padding: 8px;
+    }
+
+    .paper-large {
+      background: white;
+      color: #0b1a29;
+      font-weight: 900;
+      font-family: ui-monospace, monospace;
+      padding: 12px 14px;
+      border-radius: 10px;
+      box-shadow: 0 12px 24px rgba(0,0,0,.2);
+      font-size: 18px;
+      letter-spacing: .08em;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .12s ease, filter .12s ease;
+      letter-spacing: .02em;
+    }
+
+    button:hover { filter: brightness(1.03); }
+    button:active { transform: translateY(1px); }
+
+    .primary-btn {
+      background: linear-gradient(90deg, var(--accent), #7d9cff);
+      color: #061421;
+    }
+
+    .ghost-btn {
+      background: linear-gradient(90deg, rgba(27,46,66,.95), rgba(20,35,51,.95));
+      color: var(--text);
+      border: 1px solid var(--line);
+    }
+
+    .level-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .level-btn {
+      text-align: left;
+      background: rgba(255,255,255,.02);
+      border: 1px solid rgba(255,255,255,.04);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    .level-btn.active {
+      background: linear-gradient(90deg, rgba(127,227,255,.2), rgba(125,247,187,.12));
+      border-color: rgba(127,227,255,.38);
+      box-shadow: 0 0 0 1px rgba(127,227,255,.12) inset;
+    }
+
+    .level-meta {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 4px;
+    }
+
+    .flash {
+      position: absolute;
+      inset: 0;
+      background: rgba(255,109,109,.22);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .15s ease;
+      mix-blend-mode: screen;
+    }
+
+    .confirm-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(3, 9, 16, .62);
+      backdrop-filter: blur(4px);
+      z-index: 20;
+    }
+
+    .confirm-card {
+      width: min(440px, 76vw);
+      background: rgba(10, 19, 29, .94);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.42);
+      padding: 22px 20px 18px;
+      text-align: center;
+    }
+
+    .confirm-card h2 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.1;
+    }
+
+    .confirm-card p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .mini-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 900px) {
+      .side-panel {
+        width: 280px;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .game-shell {
+        height: min(820px, 96vh);
+      }
+
+      .topbar {
+        left: 12px;
+        right: 12px;
+        top: 12px;
+      }
+
+      .arena {
+        left: 10px;
+        right: 10px;
+        top: 76px;
+        bottom: 10px;
+      }
+
+      .side-panel {
+        display: none;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>Gatekeeper — Security Check</h1>
-      <div class="hud">
-        <div class="pill">Level: <span id="lv">1</span></div>
-        <div class="pill">Time: <span id="time">30</span>s</div>
-        <div class="pill">Score: <span id="score">0</span></div>
+  <div class="game-shell">
+    <div class="topbar">
+      <div class="brand"><span class="brand-dot"></span> Gatekeeper</div>
+      <div class="stats">
+        <div class="stat score"><span class="label">Score</span><span class="value" id="score">0</span></div>
+        <div class="stat time"><span class="label">Time</span><span class="value" id="time">30</span></div>
+        <div class="stat level"><span class="label">Level</span><span class="value" id="level">1</span></div>
       </div>
-    </header>
+    </div>
 
-    <div class="play-area">
+    <div class="arena">
       <div class="street">
         <div class="queue" id="queue"></div>
-        <div class="flash" id="missFlash"></div>
+        <div class="flash" id="flash"></div>
       </div>
 
-      <div class="building">
-        <div class="gate">SECURE ENTRANCE</div>
-
-        <div class="controls">
-          <div class="panel">
-            <div class="title-row">
-              <div class="small">Selected person</div>
-              <button id="startBtn" class="btn secondary" style="padding:8px 10px;font-size:12px">Start</button>
-            </div>
-            <div class="inspect" id="inspect">
-              <div class="small">Click a person to inspect their paper</div>
-            </div>
+      <aside class="side-panel">
+        <div class="panel-box">
+          <div class="panel-title">
+            <span class="tiny">Selected</span>
+            <button class="ghost-btn" id="startBtn" style="padding:8px 10px;font-size:12px;">Start</button>
           </div>
-
-          <div class="panel">
-            <div class="small">Actions</div>
-            <div style="display:flex;gap:8px;margin-top:8px">
-              <button id="allowBtn" class="btn">Allow In</button>
-              <button id="removeBtn" class="btn secondary">Remove</button>
-            </div>
+          <div class="inspect-box" id="inspectBox">
+            <div>Click a person to inspect their paper.</div>
           </div>
+        </div>
 
-          <div class="panel">
-            <div class="small">Levels</div>
-            <div class="level-list" id="levels"></div>
+        <div class="panel-box">
+          <div class="tiny">Actions</div>
+          <div class="action-row">
+            <button class="primary-btn" id="allowBtn">Allow In</button>
+            <button class="ghost-btn" id="removeBtn">Remove</button>
           </div>
+        </div>
 
-          <div class="panel">
-            <div class="small">Level info</div>
-            <div class="small" id="levelInfo">Correct papers are ascending sequences like “3 4 5”. Wrong papers are rejected or removed.</div>
-          </div>
+        <div class="panel-box">
+          <div class="tiny">Levels</div>
+          <div class="level-list" id="levelList"></div>
+        </div>
+
+        <div class="panel-box">
+          <div class="tiny">Rules</div>
+          <div style="color:var(--muted); line-height:1.5; margin-top:8px;" id="rulesText">Only ascending sequences like 3 4 5 are valid. Wrong papers must be removed.</div>
+        </div>
+      </aside>
+    </div>
+
+    <div class="confirm-overlay" id="startOverlay">
+      <div class="confirm-card">
+        <h2>Gatekeeper</h2>
+        <p>Inspect each person's paper. Allow valid ascending numbers through, and remove suspicious ones before they reach the gate.</p>
+        <div class="mini-row">
+          <button class="primary-btn" id="beginBtn">Start Game</button>
         </div>
       </div>
     </div>
@@ -102,247 +496,298 @@
 
   <script>
     const levels = [
-      { name:'Training', duration:25, spawn:2000, speed:0.6, length:3, invalidChance:0.25, passScore:30 },
-      { name:'Patrol', duration:28, spawn:1600, speed:0.9, length:3, invalidChance:0.28, passScore:60 },
-      { name:'Alert', duration:30, spawn:1300, speed:1.1, length:4, invalidChance:0.34, passScore:110 },
-      { name:'High Alert', duration:32, spawn:1100, speed:1.5, length:4, invalidChance:0.4, passScore:180 },
-      { name:'Lockdown', duration:35, spawn:900, speed:2, length:5, invalidChance:0.48, passScore:260 }
+      { name: 'Training', duration: 25, spawn: 1900, speed: 0.7, length: 3, invalidChance: 0.22, passScore: 30 },
+      { name: 'Patrol', duration: 28, spawn: 1500, speed: 1.0, length: 3, invalidChance: 0.28, passScore: 60 },
+      { name: 'Alert', duration: 30, spawn: 1250, speed: 1.3, length: 4, invalidChance: 0.32, passScore: 100 },
+      { name: 'High Alert', duration: 32, spawn: 1050, speed: 1.7, length: 4, invalidChance: 0.40, passScore: 180 },
+      { name: 'Lockdown', duration: 35, spawn: 900, speed: 2.15, length: 5, invalidChance: 0.48, passScore: 260 }
     ];
 
     const queueEl = document.getElementById('queue');
-    const inspectEl = document.getElementById('inspect');
-    const allowBtn = document.getElementById('allowBtn');
-    const removeBtn = document.getElementById('removeBtn');
+    const inspectBox = document.getElementById('inspectBox');
     const scoreEl = document.getElementById('score');
     const timeEl = document.getElementById('time');
-    const lvEl = document.getElementById('lv');
-    const levelInfo = document.getElementById('levelInfo');
-    const missFlash = document.getElementById('missFlash');
-    const levelsNode = document.getElementById('levels');
+    const levelEl = document.getElementById('level');
+    const flash = document.getElementById('flash');
+    const levelList = document.getElementById('levelList');
+    const rulesText = document.getElementById('rulesText');
+    const startOverlay = document.getElementById('startOverlay');
+    const beginBtn = document.getElementById('beginBtn');
     const startBtn = document.getElementById('startBtn');
+    const allowBtn = document.getElementById('allowBtn');
+    const removeBtn = document.getElementById('removeBtn');
 
-    let people = [];
-    let selected = null;
+    let currentLevelIndex = 0;
     let score = 0;
     let timeLeft = levels[0].duration;
-    let currentLevel = 0;
+    let selected = null;
+    let people = [];
+    let running = false;
+    let personId = 0;
     let spawnTimer = null;
     let gameTimer = null;
     let countdownTimer = null;
-    let running = false;
-    let personId = 0;
+    let bestScore = Number(localStorage.getItem('gatekeeper-best') || 0);
 
-    function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
 
-    function createPaper(isValid, length){
-      const start = randInt(1,9);
-      const seq = Array.from({length}, (_,i) => start + i);
-      if (isValid) return seq.join(' ');
+    function createPaper(isValid, length) {
+      const start = randInt(1, 9);
+      const arr = Array.from({ length }, (_, i) => start + i);
+
+      if (isValid) return arr.join(' ');
+
       if (Math.random() < 0.5) {
-        const arr = seq.slice();
-        const a = randInt(0, arr.length - 1);
-        const b = randInt(0, arr.length - 1);
-        const t = arr[a]; arr[a] = arr[b]; arr[b] = t;
-        return arr.join(' ');
+        const copy = arr.slice();
+        const a = randInt(0, copy.length - 1);
+        const b = randInt(0, copy.length - 1);
+        [copy[a], copy[b]] = [copy[b], copy[a]];
+        return copy.join(' ');
       }
-      const arr = seq.slice();
-      const idx = randInt(0, arr.length - 1);
-      arr[idx] = arr[idx] + randInt(1,3);
-      return arr.join(' ');
+
+      const copy = arr.slice();
+      const idx = randInt(0, copy.length - 1);
+      copy[idx] += randInt(1, 3);
+      return copy.join(' ');
     }
 
-    function renderLevelButtons(){
-      levelsNode.innerHTML = '';
-      levels.forEach((lv, idx) => {
-        const btn = document.createElement('div');
-        btn.className = 'level-item' + (idx === currentLevel ? ' active' : '');
-        btn.textContent = `${lv.name} — ${lv.passScore} pts`;
-        btn.addEventListener('click', () => {
-          currentLevel = idx;
-          renderLevelButtons();
-          updateHUD();
-        });
-        levelsNode.appendChild(btn);
-      });
-    }
-
-    function updateHUD(){
-      const lv = levels[currentLevel];
+    function updateHud() {
+      const lv = levels[currentLevelIndex];
       scoreEl.textContent = score;
       timeEl.textContent = timeLeft;
-      lvEl.textContent = currentLevel + 1;
-      levelInfo.textContent = `${lv.name}: ${lv.length}-digit ascending papers, ${lv.invalidChance * 100}% invalid chance.`;
+      levelEl.textContent = String(currentLevelIndex + 1);
+      rulesText.textContent = `${lv.name}: valid papers are ascending sequences like 3 4 5. Wrong papers should be removed before they reach the gate.`;
     }
 
-    function renderInspect(){
-      if (!selected) {
-        inspectEl.innerHTML = '<div class="small">Click a person to inspect their paper</div>';
-        return;
-      }
-      inspectEl.innerHTML = `<div class="paperLarge">${selected.paper}</div><div class="small">Valid: ${selected.valid ? 'Yes' : 'No'}</div>`;
-    }
-
-    function selectPerson(id){
-      selected = people.find(p => p.id === id) || null;
-      renderInspect();
-      Array.from(queueEl.children).forEach(ch => {
-        ch.style.outline = ch.dataset.id == id ? '2px solid rgba(255,255,255,0.2)' : 'none';
+    function renderLevelButtons() {
+      levelList.innerHTML = '';
+      levels.forEach((lv, idx) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'level-btn' + (idx === currentLevelIndex ? ' active' : '');
+        btn.innerHTML = `${lv.name}<span class="level-meta">${lv.passScore} pts to clear</span>`;
+        btn.addEventListener('click', () => {
+          currentLevelIndex = idx;
+          timeLeft = levels[currentLevelIndex].duration;
+          renderLevelButtons();
+          updateHud();
+        });
+        levelList.appendChild(btn);
       });
     }
 
-    function spawnPerson(){
-      const lv = levels[currentLevel];
-      const isValid = Math.random() > lv.invalidChance;
-      const paper = createPaper(isValid, lv.length);
+    function renderInspect() {
+      if (!selected) {
+        inspectBox.innerHTML = '<div>Click a person to inspect their paper.</div>';
+        return;
+      }
+
+      inspectBox.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;">
+          <div class="paper-large">${selected.paper}</div>
+          <div style="font-size:12px; color: var(--muted);">Valid: ${selected.valid ? 'Yes' : 'No'}</div>
+        </div>
+      `;
+    }
+
+    function addPerson() {
+      const lv = levels[currentLevelIndex];
+      const valid = Math.random() > lv.invalidChance;
+      const paper = createPaper(valid, lv.length);
       const id = ++personId;
+
       const el = document.createElement('div');
       el.className = 'person';
       el.dataset.id = String(id);
-      el.dataset.valid = isValid ? '1' : '0';
+      el.dataset.valid = valid ? '1' : '0';
       el.dataset.paper = paper;
-      el.innerHTML = `<div class="body"></div><div class="paper">${paper}</div>`;
+      el.innerHTML = `
+        <div class="paper">${paper}</div>
+        <div class="body"></div>
+      `;
       el.addEventListener('click', () => selectPerson(id));
-      queueEl.appendChild(el);
 
-      const x = queueEl.clientWidth - 90;
-      const y = 20 + Math.random() * (queueEl.clientHeight - 120);
+      const x = queueEl.clientWidth - 120;
+      const y = 30 + Math.random() * (queueEl.clientHeight - 150);
       el.style.left = x + 'px';
       el.style.top = y + 'px';
+      queueEl.appendChild(el);
 
-      people.push({ id, el, x, y, valid: isValid, paper, speed: (0.4 + Math.random() * 0.7) * lv.speed });
+      people.push({
+        id,
+        el,
+        valid,
+        paper,
+        x,
+        y,
+        speed: (0.6 + Math.random() * 0.8) * lv.speed
+      });
     }
 
-    function removePerson(id){
+    function selectPerson(id) {
+      selected = people.find(p => p.id === id) || null;
+      Array.from(queueEl.children).forEach(ch => {
+        ch.classList.toggle('selected', Number(ch.dataset.id) === id);
+      });
+      renderInspect();
+    }
+
+    function removePerson(id) {
       const idx = people.findIndex(p => p.id === id);
       if (idx === -1) return;
       const p = people[idx];
       p.el.remove();
       people.splice(idx, 1);
+
       if (selected && selected.id === id) {
         selected = null;
         renderInspect();
       }
     }
 
-    function flashMiss(){
-      missFlash.style.opacity = '0.9';
-      setTimeout(() => missFlash.style.opacity = '0', 140);
+    function flashMistEffect() {
+      flash.style.opacity = '0.75';
+      setTimeout(() => flash.style.opacity = '0', 180);
     }
 
-    function allowSelected(){
+    function allowSelected() {
       if (!selected) return;
-      if (selected.valid) {
-        score += 10 + currentLevel * 5;
+
+      const isValid = selected.valid;
+      if (isValid) {
+        score += 12 + currentLevelIndex * 5;
         removePerson(selected.id);
       } else {
-        score = Math.max(0, score - 15);
+        score = Math.max(0, score - 16);
         selected.el.style.opacity = '0';
-        selected.el.style.transform = 'translateX(200px) scale(0.7)';
-        setTimeout(() => removePerson(selected.id), 300);
+        selected.el.style.transform = 'translateX(160px) scale(0.7)';
+        setTimeout(() => removePerson(selected.id), 240);
       }
-      flashMiss();
-      if (!selected) renderInspect();
-      updateHUD();
+
+      updateHud();
+      flashMistEffect();
+      renderInspect();
     }
 
-    function removeSelected(){
+    function removeSelected() {
       if (!selected) return;
+
       if (!selected.valid) {
-        score += 8 + currentLevel * 4;
+        score += 12 + currentLevelIndex * 4;
         selected.el.style.opacity = '0';
-        setTimeout(() => removePerson(selected.id), 250);
+        setTimeout(() => removePerson(selected.id), 220);
       } else {
         score = Math.max(0, score - 12);
         selected.el.style.transform = 'translateX(-30px)';
-        setTimeout(() => removePerson(selected.id), 200);
+        setTimeout(() => removePerson(selected.id), 180);
       }
-      flashMiss();
-      updateHUD();
+
+      updateHud();
+      flashMistEffect();
+      renderInspect();
     }
 
-    function tickQueue(){
+    function stepQueue() {
       for (let i = people.length - 1; i >= 0; i--) {
         const p = people[i];
         p.x -= p.speed * 2;
-        if (p.x < 20) {
+
+        if (p.x < 12) {
           if (p.valid) {
-            score += 6 + currentLevel * 3;
+            score += 6 + currentLevelIndex * 3;
           } else {
             score = Math.max(0, score - 10);
           }
           removePerson(p.id);
-          updateHUD();
+          updateHud();
           continue;
         }
+
         p.el.style.left = p.x + 'px';
       }
-      updateHUD();
     }
 
-    function startRound(){
-      const lv = levels[currentLevel];
-      running = true;
-      score = 0;
-      timeLeft = lv.duration;
-      people.forEach(p => p.el.remove());
-      people = [];
-      selected = null;
-      renderInspect();
-      updateHUD();
-
-      if (spawnTimer) clearInterval(spawnTimer);
-      if (gameTimer) clearInterval(gameTimer);
-      if (countdownTimer) clearInterval(countdownTimer);
-
-      spawnTimer = setInterval(() => spawnPerson(), lv.spawn);
-      gameTimer = setInterval(() => {
-        if (running) tickQueue();
-      }, 1000 / 30);
-
-      countdownTimer = setInterval(() => {
-        if (!running) return;
-        timeLeft -= 1;
-        updateHUD();
-        if (timeLeft <= 0) endRound();
-      }, 1000);
-    }
-
-    function endRound(){
+    function endRound() {
       running = false;
       clearInterval(spawnTimer);
       clearInterval(gameTimer);
       clearInterval(countdownTimer);
 
-      const lv = levels[currentLevel];
+      const lv = levels[currentLevelIndex];
       const passed = score >= lv.passScore;
+      bestScore = Math.max(bestScore, score);
+      localStorage.setItem('gatekeeper-best', String(bestScore));
 
       if (passed) {
-        if (currentLevel < levels.length - 1) {
-          alert(`Level cleared! ${lv.name} passed. Moving to ${levels[currentLevel + 1].name}.`);
-          currentLevel += 1;
+        if (currentLevelIndex < levels.length - 1) {
+          alert(`Level cleared: ${lv.name}. Next up: ${levels[currentLevelIndex + 1].name}.`);
+          currentLevelIndex += 1;
           renderLevelButtons();
           startRound();
         } else {
-          alert('You cleared all levels! Excellent work.');
-          currentLevel = 0;
+          alert(`All levels cleared! Final score: ${score}.`);
+          currentLevelIndex = 0;
           renderLevelButtons();
           startRound();
         }
       } else {
-        alert(`Level failed. Score: ${score}. Needed: ${lv.passScore}. Try again.`);
-        currentLevel = Math.max(0, currentLevel);
-        renderLevelButtons();
+        alert(`Level failed. You needed ${lv.passScore} points. Score: ${score}. Try again.`);
         startRound();
       }
     }
 
-    allowBtn.addEventListener('click', allowSelected);
-    removeBtn.addEventListener('click', removeSelected);
-    startBtn.addEventListener('click', () => startRound());
+    function startRound() {
+      const lv = levels[currentLevelIndex];
+      running = true;
+      timeLeft = lv.duration;
+      score = 0;
+      selected = null;
+      people.forEach(p => p.el.remove());
+      people = [];
+      renderInspect();
+      updateHud();
 
-    renderLevelButtons();
-    updateHUD();
-    startRound();
+      clearInterval(spawnTimer);
+      clearInterval(gameTimer);
+      clearInterval(countdownTimer);
+
+      spawnTimer = setInterval(() => {
+        if (running) addPerson();
+      }, lv.spawn);
+
+      gameTimer = setInterval(() => {
+        if (running) stepQueue();
+      }, 1000 / 60);
+
+      countdownTimer = setInterval(() => {
+        if (!running) return;
+        timeLeft -= 1;
+        updateHud();
+        if (timeLeft <= 0) endRound();
+      }, 1000);
+    }
+
+    function init() {
+      renderLevelButtons();
+      updateHud();
+      beginBtn.addEventListener('click', () => {
+        startOverlay.style.display = 'none';
+        startRound();
+      });
+      startBtn.addEventListener('click', () => startRound());
+      allowBtn.addEventListener('click', allowSelected);
+      removeBtn.addEventListener('click', removeSelected);
+      window.addEventListener('resize', () => {
+        people.forEach(p => {
+          p.x = Math.min(p.x, queueEl.clientWidth - 120);
+          p.el.style.left = p.x + 'px';
+        });
+      });
+    }
+
+    init();
   </script>
 </body>
 </html>
